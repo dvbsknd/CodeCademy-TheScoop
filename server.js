@@ -2,7 +2,9 @@
 let database = {
   users: {},
   articles: {},
-  nextArticleId: 1
+  nextArticleId: 1,
+  comments: {},
+  nextCommentId: 1
 };
 
 const routes = {
@@ -238,6 +240,33 @@ function downvote(item, username) {
     item.downvotedBy.push(username);
   }
   return item;
+}
+
+function createComment() {
+  const comment = {
+      id: database.nextCommentId++,
+      body: /* will need to retrieve from POST data */,
+      username: /* will need to retrieve from POST data */,
+      articleID: /* pass from POST */,
+      upvotedBy: [],
+      downvotedBy: []
+    };
+}
+
+function getComments() {
+
+}
+
+function getComment() {
+
+}
+
+function upvoteComment() {
+
+}
+
+function downvoteComment() {
+
 }
 
 // Write all code above this line.
