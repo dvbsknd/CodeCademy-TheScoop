@@ -37,8 +37,10 @@ const routes = {
     'DELETE': deleteComment
   },
   '/comments/:id/upvote': {
+    'PUT': upvoteComment
   },
   '/comments/:id/downvote': {
+    'PUT': downvoteComment
   }
 };
 
@@ -355,19 +357,78 @@ function deleteComment(url, request) {
 
 }
 
-function getComments() {
+function voteOnComment(direction, url, request) {
+
+  // Receives comment ID from URL parameter and username from username property of request body
+  const commentId = url.split('/').filter(segment => segment)[1];
+  const user = request.body && request.body.username;
+  let increasingArray;
+  let decreasingArray;
+
+  // Initialise the repsonse object
+  response = {};
+  
+  // If no ID is supplied, 
+  // OR comment with supplied ID doesn’t exist, 
+  // OR user with supplied username doesn’t exist, 
+  // return a 400 response
+  if (!commentId || !database.comments[commentId] || !database.users[user]) {
+    response.status = 400;
+    return response;
+  }
+
+  // Set the working arrays depending on the direction of the vote
+  if (direction == 'Up') {
+    increasingArray = database.comments[commentId].upvotedBy;
+    decreasingArray = database.comments[commentId].downvotedBy;
+  } else if (direction == 'Down') {
+    increasingArray = database.comments[commentId].downvotedBy;
+    decreasingArray = database.comments[commentId].upvotedBy;
+  } else {
+    throw new Error('Invalid vote type');
+  }
+
+  // Check if username exists in the increasingArray array, and if not, add it
+  if (!increasingArray.find(voter => voter == user)) {
+    increasingArray.push(user);
+  }
+
+  // Check if username exists in the decreasingArray array, and if so, remove it
+  if (decreasingArray.find(voter => voter == user)) {
+    const i = decreasingArray.indexOf(user);
+    decreasingArray.splice(i, 1);
+  }
+
+  // Return 200 response with comment on comment property of response body
+  response.body = { comment: database.comments[commentId] };
+  response.status = 200;
+  return response;
 
 }
 
-function getComment() {
+function upvoteComment(url, request) {
+
+// Receives comment ID from URL parameter and username from username property of request body
+// Adds supplied username to upvotedBy of corresponding comment if user hasn’t already upvoted 
+// the comment, removes username from downvotedBy if that user had previously downvoted the 
+// comment, returns 200 response with comment on comment property of response body
+// If no ID is supplied, comment with supplied ID doesn’t exist, or user with supplied username 
+// doesn’t exist, returns 400 response
+
+  return voteOnComment('Up', url, request);
 
 }
 
-function upvoteComment() {
+function downvoteComment(url, request) {
 
-}
-
-function downvoteComment() {
+// Receives comment ID from URL parameter and username from username property of request body
+// Adds supplied username to downvotedBy of corresponding comment if user hasn’t already 
+// downvoted the comment, remove username from upvotedBy if that user had previously upvoted 
+// the comment, returns 200 response with comment on comment property of response body
+// If no ID is supplied, comment with supplied ID doesn’t exist, or user with supplied 
+// username doesn’t exist, returns 400 response
+  
+  return voteOnComment('Down', url, request);
 
 }
 
