@@ -28,6 +28,17 @@ const routes = {
   },
   '/articles/:id/downvote': {
     'PUT': downvoteArticle
+  },
+  '/comments': {
+    'POST': createComment
+  },
+  '/comments/:id': {
+    'PUT': updateComment,
+    'DELETE': deleteComment
+  },
+  '/comments/:id/upvote': {
+  },
+  '/comments/:id/downvote': {
   }
 };
 
@@ -242,15 +253,106 @@ function downvote(item, username) {
   return item;
 }
 
-function createComment() {
-  const comment = {
-      id: database.nextCommentId++,
-      body: /* will need to retrieve from POST data */,
-      username: /* will need to retrieve from POST data */,
-      articleID: /* pass from POST */,
-      upvotedBy: [],
-      downvotedBy: []
-    };
+function createComment(url, request) {
+  const requestComment = request.body && request.body.comment;
+  const response = {};
+
+  if (
+    request.body &&
+    request.body.comment &&
+    requestComment.body && 
+    requestComment.username && 
+    requestComment.articleId &&
+    database.users[requestComment.username] &&
+    database.articles[requestComment.articleId]
+    ) {
+
+      const comment = {
+        id: database.nextCommentId++,
+        body: requestComment.body, 
+        username: requestComment.username,
+        articleId: requestComment.articleId,
+        upvotedBy: [],
+        downvotedBy: []
+      };
+
+    database.comments[comment.id] = comment;
+    database.users[comment.username].commentIds.push(comment.id);
+    database.articles[comment.articleId].commentIds.push(comment.id);
+
+    response.body = {comment: comment};
+    response.status = 201;
+
+  } else {
+    response.status = 400;
+ }
+
+  return response;
+}
+
+function updateComment(url, request) {
+  const requestComment = request.body && request.body.comment;
+  const response = {};
+
+  // Comment supplied in response body will have .id, .body, .username, .articleID
+
+  // If an equivalent comment doesn't exist, abort
+  if (!database.comments[url.split('/')[2]]) {
+    response.status = 404;
+    return response; 
+  }
+
+  // Validate supplied data, then update
+  if ( 
+    requestComment && // Comment body supplied
+    url.split('/')[2] == requestComment.id && // Endpoint matches ID in supplied body
+    requestComment.username == database.comments[requestComment.id].username && // User matches
+    requestComment.articleId == database.comments[requestComment.id].articleId && // Article matches
+    requestComment.body != '' // Comment isn't blank
+    ) {
+
+    database.comments[requestComment.id].body = requestComment.body;
+    response.status = 200;
+
+  } else {
+    response.status = 400;
+  }
+
+  return response;
+
+}
+
+function deleteComment(url, request) {
+
+  // Receives comment ID from URL parameter, prepares response
+  const commentId = url.split('/')[2];
+  response = {};
+
+  // If no ID is supplied or comment with supplied ID doesn’t exist, returns 404 response
+  if (!commentId || !database.comments[commentId]) {
+    response.status = 404;
+    return response;
+  }
+
+  // Gets the user & artice IDs from the comment in the database
+  const commentUser = database.comments[commentId].username;
+  const articleId = database.comments[commentId].articleId;
+
+  // removes all references to its ID from corresponding user model
+  let userCommentIndex = database.users[commentUser].commentIds.indexOf(Number(commentId));
+  database.users[commentUser].commentIds.splice(userCommentIndex, 1);
+  
+  // removes all references to its ID from corresponding article model
+  let articleCommentIndex = database.articles[articleId].commentIds.indexOf(Number(commentId));
+  database.articles[articleId].commentIds.splice(articleCommentIndex, 1);
+
+  // Deletes comment from database
+  database.comments[commentId] = null; 
+  
+  // returns 204 response
+  response.status = 204;
+  return response;
+
 }
 
 function getComments() {
