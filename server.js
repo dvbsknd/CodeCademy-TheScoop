@@ -432,6 +432,34 @@ function downvoteComment(url, request) {
 
 }
 
+// include Figg to read/write YAML as a static database
+
+const Figg = require('figg');
+const fileStore = new Figg({
+  name: 'database',
+  extension: '.yaml'
+})
+
+function loadDatabase() {
+
+  // Reads a YAML file containing the database and returns a JavaScript object 
+  // representing the database
+  // Called once on server start-up
+
+  database = fileStore.load();
+
+}
+
+function saveDatabase() {
+
+  // Writes the current value of database to a YAML file
+  // Called on every call to a GET or POST method
+
+  fileStore.set(database);
+  fileStore.save();
+
+}
+
 // Write all code above this line.
 
 const http = require('http');
